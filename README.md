@@ -1,0 +1,1 @@
+<div align="center"><img src="https://noyxmon.onrender.com/lazy" width="50%"/></div>
