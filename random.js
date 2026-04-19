@@ -32,18 +32,25 @@ function serve(res, filePath)
 app.get('/', (_req, res) => res.sendStatus(200))
 
 app.get('/@:user', (req, res) => {
+  res.redirect(`/@${req.params.user}/_.gif`)
+})
+
+app.get(['/@:user/_.gif', '/@:user/_:n.gif'], (req, res) => {
   const user = req.params.user.replace(/[^a-z0-9_-]/gi, '')
   const dir = path.join(assets, `@${user}`)
+  const n = parseInt(req.params.n)
 
   fs.readdir(dir, (err, files) => {
     if (err)
       return res.sendStatus(404)
-
     const media = files.filter(f => exts.has(path.extname(f).toLowerCase()))
     if (!media.length)
       return res.sendStatus(404)
 
-    const pick = randomPick(user, media)
+    const pick = isNaN(n) ? randomPick(user, media) : media[n - 1]
+    if (!pick)
+      return res.sendStatus(404)
+
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate')
     res.sendFile(path.join(dir, pick))
   })
@@ -53,33 +60,27 @@ app.get('/:folder/:file', (req, res, next) => {
   const folder = path.basename(req.params.folder)
   const file = path.basename(req.params.file)
   const ext = path.extname(file).toLowerCase()
-
   if (folder.startsWith('@') || !exts.has(ext))
     return next()
-
   serve(res, path.join(assets, folder, file))
 })
 
 app.get('/:file', (req, res) => {
   const file = path.basename(req.params.file)
   const ext = path.extname(file).toLowerCase()
-
   if (!ext) {
     return fs.readdir(assets, (err, files) => {
       if (err)
         return res.sendStatus(404)
-
       const match = files.find(f =>
         path.basename(f, path.extname(f)) === file &&
         exts.has(path.extname(f).toLowerCase())
       )
-
       if (!match)
         return res.sendStatus(404)
       res.redirect(`/${match}`)
     })
   }
-
   if (!exts.has(ext))
     return res.sendStatus(404)
   serve(res, path.join(assets, file))
